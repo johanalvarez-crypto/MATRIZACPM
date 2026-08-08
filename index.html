@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matriz ACPM - Gestión de Calidad</title>
+    <title>Matriz ACPM Avanzada - Multiusuario</title>
     
     <!-- Chart.js para los gráficos del Dashboard -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -53,10 +53,32 @@
             align-items: center;
             margin-bottom: 20px;
             border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        h1 { margin: 0; font-size: 1.8rem; color: #0f172a; }
+        .header-title h1 { margin: 0; font-size: 1.6rem; color: #0f172a; }
+        .header-title p { margin: 3px 0 0 0; font-size: 0.85rem; color: #64748b; }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-syncing { background-color: #fef3c7; color: #b45309; }
+        .status-connected { background-color: #dcfce7; color: #15803d; }
 
         .kpi-container {
             display: grid;
@@ -74,7 +96,7 @@
             text-align: center;
         }
 
-        .kpi-card span { display: block; font-size: 0.85rem; color: #64748b; }
+        .kpi-card span { display: block; font-size: 0.85rem; color: #64748b; font-weight: 600; }
         .kpi-card h2 { margin: 5px 0 0 0; font-size: 1.8rem; }
 
         .charts-container {
@@ -206,16 +228,24 @@
 
     <div class="container">
         <header>
-            <h1>Matriz ACPM (Ciclo PHVA)</h1>
-            <button class="btn btn-primary" onclick="abrirModalNuevo()">+ Nuevo Hallazgo</button>
+            <div class="header-title">
+                <h1>MATRIZ ACPM (Acciones Correctivas, Preventivas y de Mejora)</h1>
+                <p>Gestión Sincronizada Multi-PC, Análisis de Causa Raíz y Reporte QR</p>
+            </div>
+            <div class="header-actions">
+                <div id="syncStatus" class="status-badge status-syncing">
+                    <span>⏳</span> <span id="syncText">Sincronizando...</span>
+                </div>
+                <button class="btn btn-success" onclick="abrirModalNuevo()">+ Nueva Acción ACPM</button>
+            </div>
         </header>
 
         <!-- KPI Cards -->
         <div class="kpi-container">
-            <div class="kpi-card"><span>Total Hallazgos</span><h2 id="kpiTotal">0</h2></div>
-            <div class="kpi-card"><span>Abiertas</span><h2 id="kpiAbiertas" style="color:var(--danger)">0</h2></div>
-            <div class="kpi-card"><span>En Proceso</span><h2 id="kpiProceso" style="color:var(--warning)">0</h2></div>
-            <div class="kpi-card"><span>Cerradas</span><h2 id="kpiCerradas" style="color:var(--success)">0</h2></div>
+            <div class="kpi-card"><span>TOTAL ACCIONES</span><h2 id="kpiTotal">0</h2></div>
+            <div class="kpi-card"><span>ABIERTAS</span><h2 id="kpiAbiertas" style="color:var(--danger)">0</h2></div>
+            <div class="kpi-card"><span>EN PROCESO</span><h2 id="kpiProceso" style="color:var(--warning)">0</h2></div>
+            <div class="kpi-card"><span>CERRADAS</span><h2 id="kpiCerradas" style="color:var(--success)">0</h2></div>
         </div>
 
         <!-- Dashboard Gráficos -->
@@ -230,7 +260,7 @@
             <label>Desde: <input type="date" id="filtroFechaInicio" onchange="updateDashboard()"></label>
             <label>Hasta: <input type="date" id="filtroFechaFin" onchange="updateDashboard()"></label>
             <button class="btn btn-secondary" onclick="limpiarFiltrosFecha()">Limpiar Filtros</button>
-            <button class="btn btn-success" style="margin-left:auto;" onclick="exportCSV()">📥 Exportar Excel (CSV)</button>
+            <button class="btn btn-success" style="margin-left:auto;" onclick="exportCSV()">📊 Exportar a Excel (CSV)</button>
         </div>
 
         <!-- Tabla de Datos -->
@@ -404,15 +434,16 @@
     </div>
 
     <script>
-        // Configuración de Firebase (Coloca las credenciales de tu proyecto si las tienes)
+        // CONFIGURACIÓN REAL DE FIREBASE (MATRIZ-ACPM)
         const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "tu-app.firebaseapp.com",
-            databaseURL: "https://tu-app-default-rtdb.firebaseio.com",
-            projectId: "tu-app",
-            storageBucket: "tu-app.appspot.com",
-            messagingSenderId: "12345678",
-            appId: "1:12345678:web:abcdef"
+            apiKey: "AIzaSyDVSqcHSU51tR1fx0kbXaD0yRoJadI4Hiw",
+            authDomain: "matriz-acpm.firebaseapp.com",
+            databaseURL: "https://matriz-acpm-default-rtdb.firebaseio.com",
+            projectId: "matriz-acpm",
+            storageBucket: "matriz-acpm.firebasestorage.app",
+            messagingSenderId: "807697032234",
+            appId: "1:807697032234:web:491c5e068bd8ab9c2e0f53",
+            measurementId: "G-HDTNWNY21C"
         };
 
         if (!firebase.apps.length) {
@@ -426,6 +457,23 @@
 
         // Sincronización en tiempo real con Firebase
         function initSync() {
+            // Monitor de conexión de Firebase
+            const connectedRef = firebase.database().ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                const syncBadge = document.getElementById('syncStatus');
+                const syncText = document.getElementById('syncText');
+                if (snap.val() === true) {
+                    syncBadge.className = 'status-badge status-connected';
+                    syncBadge.firstElementChild.innerText = '🟢';
+                    syncText.innerText = 'Sincronizado';
+                } else {
+                    syncBadge.className = 'status-badge status-syncing';
+                    syncBadge.firstElementChild.innerText = '⏳';
+                    syncText.innerText = 'Sincronizando...';
+                }
+            });
+
+            // Escuchar cambios en la base de datos
             dbRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 actionsList = [];
