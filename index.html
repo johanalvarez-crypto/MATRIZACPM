@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATRIZ ACPM</title>
+    <title>MATRIZ ACPM (Ciclo PHVA)</title>
 
     <!-- Chart.js para los gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,7 +37,7 @@
         }
 
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -268,12 +268,13 @@
     <div class="container">
         <header>
             <div class="header-title">
-                <h1>MATRIZ ACPM (Acciones Correctivas, Preventivas y de Mejora)</h1>
+                <h1>Matriz ACPM (Ciclo PHVA)</h1>
                 <p>Gestión Sincronizada Multi-PC, Análisis de Causa Raíz y Reporte QR</p>
             </div>
             <div style="display:flex; align-items:center; gap:12px;">
                 <span id="syncBadge" class="status-badge">⏳ Sincronizando...</span>
-                <button class="btn btn-success" onclick="abrirModalNuevo()">+ Nueva Acción ACPM</button>
+                <button class="btn btn-blue" onclick="abrirModalReporteMovil()">📱 Reporte Móvil QR</button>
+                <button class="btn btn-success" onclick="abrirModalNuevo()">+ Nuevo Hallazgo</button>
             </div>
         </header>
 
@@ -299,7 +300,7 @@
             <span>Hasta:</span>
             <input type="date" id="filtroFechaFin" onchange="updateDashboard()">
             <button class="btn btn-secondary" onclick="limpiarFiltrosFecha()">Limpiar Filtros</button>
-            <button class="btn btn-success" style="margin-left:auto;" onclick="exportCSV()">📊 Exportar a Excel (CSV)</button>
+            <button class="btn btn-success" style="margin-left:auto;" onclick="exportCSV()">📊 Exportar Excel (CSV)</button>
         </div>
 
         <!-- Tabla -->
@@ -318,7 +319,7 @@
                     <th>Límite</th>
                     <th>Estado</th>
                     <th>Análisis Causa</th>
-                    <th>Plan Tareas</th>
+                    <th>Plan de Acción</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -456,7 +457,19 @@
         </div>
     </div>
 
-    <!-- MODAL REPORTE QR Y FICHA -->
+    <!-- MODAL REPORTE MÓVIL CON CÓDIGO QR -->
+    <div class="modal" id="reporteMovilModal">
+        <div class="modal-content" style="text-align:center;">
+            <h3>Escanea para Reportar por Celular</h3>
+            <p style="font-size:0.85rem; color:#64748b;">Escanea este código QR desde tu smartphone para registrar un hallazgo de forma remota en tiempo real.</p>
+            <div id="qrcodeMovil" style="display:flex; justify-content:center; margin:20px 0;"></div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn btn-secondary" onclick="cerrarModal('reporteMovilModal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REPORTE INDIVIDUAL QR -->
     <div class="modal" id="qrModal">
         <div class="modal-content" style="max-width:650px;">
             <div id="printableArea">
@@ -591,6 +604,17 @@
             document.getElementById('modalHallazgoTitulo').innerText = 'Registrar Nueva Acción ACPM';
             document.getElementById('previewInicial').style.display = 'none';
             document.getElementById('hallazgoModal').classList.add('active');
+        }
+
+        function abrirModalReporteMovil() {
+            const container = document.getElementById('qrcodeMovil');
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: window.location.href,
+                width: 180,
+                height: 180
+            });
+            document.getElementById('reporteMovilModal').classList.add('active');
         }
 
         function reabrirHallazgo(index) {
