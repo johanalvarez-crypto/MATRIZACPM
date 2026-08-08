@@ -12,8 +12,7 @@
     <!-- QRious JS (Librería de renderizado QR) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- EmailJS SDK para envío directo de correos -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
+
     <style>
         :root {
             --bg-color: #f1f5f9; --card-bg: #ffffff; --text-color: #1e293b;
@@ -369,7 +368,6 @@
     <script>
         // Configuración EmailJS (Inicializar)
         (function() {
-            // REEMPLAZAR 'TU_PUBLIC_KEY' con la clave provista por EmailJS
             emailjs.init("TU_PUBLIC_KEY");
         })();
 
@@ -421,7 +419,6 @@
                 descripcion_hallazgo: descripcion
             };
 
-            // Reemplaza 'YOUR_SERVICE_ID' y 'YOUR_TEMPLATE_ID' con tus datos de EmailJS
             emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', emailParams)
                 .then(function(response) {
                     console.log('Correo enviado con éxito!', response.status, response.text);
@@ -556,65 +553,47 @@
 
             if (editIndex >= 0) {
                 const item = actionsList[editIndex];
-                if (dbRef && item.key) dbRef.child(item.key).update(itemData);
+                if (dbRef) dbRef.child(item.key).update(itemData);
             } else {
-                const newAction = { ...itemData, analisisCausa: null, planTareas: [], fotoFinal: '', obsCierre: '' };
-                if (dbRef) dbRef.push(newAction);
-                enviarCorreoNotificacion(correo, cod, area, desc);
+                if (dbRef) dbRef.push({ ...itemData, analisisCausa: null, planTareas: [], fotoFinal: '', obsCierre: '' });
             }
+
+            enviarCorreoNotificacion(correo, cod, area, desc);
             cerrarModal('formModal');
+        }
+
+        function cambiarEstado(index, nuevoEstado) {
+            const item = actionsList[index];
+            if (dbRef) dbRef.child(item.key).update({ estado: nuevoEstado });
+        }
+
+        function eliminarAccion(index) {
+            if (confirm('¿Estás seguro de eliminar este registro?')) {
+                const item = actionsList[index];
+                if (dbRef) dbRef.child(item.key).remove();
+            }
         }
 
         function abrirModalCausa(index) {
             currentActionIndex = index;
             const item = actionsList[index];
             document.getElementById('causaActionTitle').innerText = `${item.codigo} - ${item.descripcion}`;
-            const causa = item.analisisCausa || {};
-            const metodo = causa.metodologia || '5porque';
-            document.getElementById('metodologiaSelect').value = metodo;
-            cambiarMetodologia(metodo);
-
-            document.getElementById('p1').value = causa.p1 || '';
-            document.getElementById('p2').value = causa.p2 || '';
-            document.getElementById('p3').value = causa.p3 || '';
-            document.getElementById('p4').value = causa.p4 || '';
-            document.getElementById('p5').value = causa.p5 || '';
-
-            document.getElementById('ishMano').value = causa.ishMano || '';
-            document.getElementById('ishMaq').value = causa.ishMaq || '';
-            document.getElementById('ishMet').value = causa.ishMet || '';
-            document.getElementById('ishMat').value = causa.ishMat || '';
-            document.getElementById('ishAmb').value = causa.ishAmb || '';
-            document.getElementById('ishMed').value = causa.ishMed || '';
-
-            document.getElementById('arbolInmediatas').value = causa.arbolInmediatas || '';
-            document.getElementById('arbolBasicas').value = causa.arbolBasicas || '';
-            document.getElementById('causaRaizFinal').value = causa.causaRaizFinal || '';
-
+            cerrarModal('formModal');
             document.getElementById('causaModal').classList.add('active');
         }
 
-        function cambiarMetodologia(metodo) {
-            document.getElementById('sec5Porque').style.display = metodo === '5porque' ? 'block' : 'none';
-            document.getElementById('secIshikawa').style.display = metodo === 'ishikawa' ? 'block' : 'none';
-            document.getElementById('secArbol').style.display = metodo === 'arbol' ? 'block' : 'none';
+        function cambiarMetodologia(val) {
+            document.getElementById('sec5Porque').style.display = val === '5porque' ? 'block' : 'none';
+            document.getElementById('secIshikawa').style.display = val === 'ishikawa' ? 'block' : 'none';
+            document.getElementById('secArbol').style.display = val === 'arbol' ? 'block' : 'none';
         }
 
         function guardarAnalisisCausa() {
             if (currentActionIndex === null) return;
             const item = actionsList[currentActionIndex];
-            const causaData = {
-                metodologia: document.getElementById('metodologiaSelect').value,
-                p1: document.getElementById('p1').value, p2: document.getElementById('p2').value,
-                p3: document.getElementById('p3').value, p4: document.getElementById('p4').value, p5: document.getElementById('p5').value,
-                ishMano: document.getElementById('ishMano').value, ishMaq: document.getElementById('ishMaq').value,
-                ishMet: document.getElementById('ishMet').value, ishMat: document.getElementById('ishMat').value,
-                ishAmb: document.getElementById('ishAmb').value, ishMed: document.getElementById('ishMed').value,
-                arbolInmediatas: document.getElementById('arbolInmediatas').value, arbolBasicas: document.getElementById('arbolBasicas').value,
-                causaRaizFinal: document.getElementById('causaRaizFinal').value
-            };
+            const causa = document.getElementById('causaRaizFinal').value;
 
-            if (dbRef && item.key) dbRef.child(item.key).child('analisisCausa').set(causaData);
+            if (dbRef) dbRef.child(item.key).update({ analisisCausa: causa });
             cerrarModal('causaModal');
         }
 
@@ -622,26 +601,22 @@
             currentActionIndex = index;
             const item = actionsList[index];
             document.getElementById('planActionTitle').innerText = `${item.codigo} - ${item.descripcion}`;
-            document.getElementById('obsCierre').value = item.obsCierre || '';
-            document.getElementById('tempFotoFinal').value = item.fotoFinal || '';
-            document.getElementById('previewFinal').style.display = 'none';
-            if (item.fotoFinal) {
-                document.getElementById('imgPreviewFinal').src = item.fotoFinal;
-                document.getElementById('previewFinal').style.display = 'block';
-            }
             renderPlanTareas();
             document.getElementById('planModal').classList.add('active');
         }
 
         function agregarTareaPlan() {
             if (currentActionIndex === null) return;
-            const tarea = document.getElementById('planTarea').value;
-            const resp = document.getElementById('planResp').value;
-            const fecha = document.getElementById('planFecha').value;
-            if (!tarea) return alert('Ingresa la descripción de la tarea');
+            const item = actionsList[currentActionIndex];
+            const tareas = item.planTareas || [];
 
-            if (!actionsList[currentActionIndex].planTareas) actionsList[currentActionIndex].planTareas = [];
-            actionsList[currentActionIndex].planTareas.push({ tarea, resp, fecha, completada: false });
+            tareas.push({
+                tarea: document.getElementById('planTarea').value,
+                resp: document.getElementById('planResp').value,
+                fecha: document.getElementById('planFecha').value
+            });
+
+            if (dbRef) dbRef.child(item.key).update({ planTareas: tareas });
             
             document.getElementById('planTarea').value = '';
             document.getElementById('planResp').value = '';
@@ -650,66 +625,46 @@
         }
 
         function renderPlanTareas() {
-            const container = document.getElementById('planList');
-            container.innerHTML = '';
-            const tareas = actionsList[currentActionIndex].planTareas || [];
-            tareas.forEach((t, idx) => {
-                const div = document.createElement('div');
-                div.className = 'plan-item';
-                div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.8rem;">
-                        <label><input type="checkbox" ${t.completada ? 'checked' : ''} onchange="toggleTareaPlan(${idx})"> ${t.tarea}</label>
-                        <span style="color:#64748b;">📅 ${t.fecha || 'Sin fecha'}</span>
-                    </div>
-                    <div style="font-size:0.75rem; color:#64748b; margin-top:3px;">👤 Responsable: ${t.resp || 'N/A'}</div>
-                `;
-                container.appendChild(div);
-            });
-        }
+            if (currentActionIndex === null) return;
+            const item = actionsList[currentActionIndex];
+            const list = document.getElementById('planList');
+            const tareas = item.planTareas || [];
 
-        function toggleTareaPlan(tIndex) {
-            const t = actionsList[currentActionIndex].planTareas[tIndex];
-            t.completada = !t.completada;
-            renderPlanTareas();
+            list.innerHTML = tareas.map(t => `
+                <div class="plan-item">
+                    <strong>${t.tarea}</strong> - ${t.resp} (${t.fecha})
+                </div>
+            `).join('');
         }
 
         function guardarPlanYEvidencia() {
             if (currentActionIndex === null) return;
             const item = actionsList[currentActionIndex];
-            const updates = {
-                planTareas: item.planTareas || [],
-                fotoFinal: document.getElementById('tempFotoFinal').value,
-                obsCierre: document.getElementById('obsCierre').value,
+
+            const updateData = {
+                fotoFinal: document.getElementById('tempFotoFinal').value || item.fotoFinal || '',
+                obsCierre: document.getElementById('obsCierre').value || item.obsCierre || '',
                 estado: 'Cerrada'
             };
-            if (dbRef && item.key) dbRef.child(item.key).update(updates);
+
+            if (dbRef) dbRef.child(item.key).update(updateData);
             cerrarModal('planModal');
         }
 
-        function cambiarEstadoDirecto(index, nuevoEstado) {
-            const item = actionsList[index];
-            if (dbRef && item.key) dbRef.child(item.key).child('estado').set(nuevoEstado);
+        function procesarFoto(input, hiddenId, previewId, imgId) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(hiddenId).value = e.target.result;
+                document.getElementById(imgId).src = e.target.result;
+                document.getElementById(previewId).style.display = 'block';
+            };
+            reader.readAsDataURL(file);
         }
 
-        function deleteAction(key) {
-            if (confirm('¿Eliminar esta acción de la base de datos?')) {
-                if (dbRef && key) dbRef.child(key).remove();
-            }
-        }
-
-        function procesarFoto(input, targetHidden, containerId, imgId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById(targetHidden).value = e.target.result;
-                    document.getElementById(imgId).src = e.target.result;
-                    document.getElementById(containerId).style.display = 'block';
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function verFotoGrande(url) {
+        function verFotoFull(url) {
             currentImgUrl = url;
             document.getElementById('imgFull').src = url;
             document.getElementById('imgModal').classList.add('active');
@@ -719,97 +674,89 @@
             if (!currentImgUrl) return;
             const a = document.createElement('a');
             a.href = currentImgUrl;
-            a.download = 'Evidencia_ACPM.jpg';
+            a.download = 'Evidencia_ACPM.png';
             a.click();
         }
 
-        function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
-
-        function updateDashboard() {
-            renderTable();
-            renderKPIs();
-            renderCharts();
+        function cerrarModal(id) {
+            document.getElementById(id).classList.remove('active');
         }
 
-        function renderKPIs() {
+        function updateDashboard() {
             document.getElementById('kpiTotal').innerText = actionsList.length;
             document.getElementById('kpiAbiertas').innerText = actionsList.filter(a => a.estado === 'Abierta').length;
             document.getElementById('kpiProceso').innerText = actionsList.filter(a => a.estado === 'En Proceso').length;
             document.getElementById('kpiCerradas').innerText = actionsList.filter(a => a.estado === 'Cerrada').length;
+
+            renderTable();
+            renderCharts();
         }
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            actionsList.forEach((a, index) => {
-                const tr = document.createElement('tr');
-                const selectClass = a.estado === 'Abierta' ? 'select-abierta' : a.estado === 'En Proceso' ? 'select-proceso' : 'select-cerrada';
-                const tieneCausa = a.analisisCausa && a.analisisCausa.causaRaizFinal ? '✅' : '❓';
-                const cantTareas = a.planTareas ? a.planTareas.length : 0;
-                const tareasListas = a.planTareas ? a.planTareas.filter(t => t.completada).length : 0;
-
-                tr.innerHTML = `
-                    <td><b>${a.codigo || '-'}</b></td>
-                    <td style="text-align:center;">${a.fotoInicial ? `<img src="${a.fotoInicial}" class="thumb-img" onclick="verFotoGrande('${a.fotoInicial}')">` : '-'}</td>
-                    <td>${a.fecha || '-'}</td>
-                    <td>${a.area || '-'}</td>
-                    <td>${a.fuente || '-'}</td>
-                    <td>${a.tipo || '-'}</td>
-                    <td title="${a.descripcion}">${a.descripcion ? (a.descripcion.length > 25 ? a.descripcion.substring(0, 25) + '...' : a.descripcion) : ''}</td>
-                    <td>${a.responsable || '-'}</td>
+            tbody.innerHTML = actionsList.map((a, i) => `
+                <tr>
+                    <td><b>${a.codigo}</b></td>
+                    <td>${a.fotoInicial ? `<img src="${a.fotoInicial}" class="thumb-img" onclick="verFotoFull('${a.fotoInicial}')">` : 'Sin foto'}</td>
+                    <td>${a.fecha}</td>
+                    <td>${a.area}</td>
+                    <td>${a.fuente}</td>
+                    <td>${a.tipo}</td>
+                    <td>${a.descripcion}</td>
+                    <td>${a.responsable}</td>
                     <td>${a.correoResponsable || '-'}</td>
-                    <td>${a.limite || '-'}</td>
+                    <td>${a.limite}</td>
                     <td>
-                        <select class="select-estado ${selectClass}" onchange="cambiarEstadoDirecto(${index}, this.value)">
+                        <select class="select-estado select-${(a.estado || 'abierta').toLowerCase().replace(' ', '')}" onchange="cambiarEstado(${i}, this.value)">
                             <option value="Abierta" ${a.estado === 'Abierta' ? 'selected' : ''}>Abierta</option>
                             <option value="En Proceso" ${a.estado === 'En Proceso' ? 'selected' : ''}>En Proceso</option>
                             <option value="Cerrada" ${a.estado === 'Cerrada' ? 'selected' : ''}>Cerrada</option>
                         </select>
                     </td>
-                    <td><button class="btn btn-purple" style="font-size:0.75rem; padding:4px 8px;" onclick="abrirModalCausa(${index})">🔍 Causa ${tieneCausa}</button></td>
-                    <td><button class="btn btn-warning" style="font-size:0.75rem; padding:4px 8px;" onclick="abrirModalPlan(${index})">📋 Plan (${tareasListas}/${cantTareas})</button></td>
                     <td>
-                        <button class="btn btn-edit" onclick="reabrirHallazgo(${index})">✏️</button>
-                        <button onclick="deleteAction('${a.key}')" style="background:none; border:none; color:#ef4444; cursor:pointer;">🗑️</button>
+                        <button class="btn btn-purple" onclick="abrirModalCausa(${i})">🔍 Causa</button>
                     </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                    <td>
+                        <button class="btn btn-success" onclick="abrirModalPlan(${i})">📋 Plan</button>
+                    </td>
+                    <td>
+                        <button class="btn btn-edit" onclick="reabrirHallazgo(${i})">✏️</button>
+                        <button class="btn btn-warning" onclick="eliminarAccion(${i})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        let chartEstado, chartTipo, chartFuente;
+        let chartE, chartT, chartF;
         function renderCharts() {
-            if (typeof Chart === 'undefined') return;
-            const estados = { 'Abierta': 0, 'En Proceso': 0, 'Cerrada': 0 };
-            const tipos = { 'Correctiva': 0, 'Preventiva': 0, 'Mejora': 0 };
+            const estados = { Abierta: 0, 'En Proceso': 0, Cerrada: 0 };
+            const tipos = { Correctiva: 0, Preventiva: 0, Mejora: 0 };
             const fuentes = {};
 
             actionsList.forEach(a => {
-                estados[a.estado || 'Abierta'] = (estados[a.estado || 'Abierta'] || 0) + 1;
-                tipos[a.tipo || 'Correctiva'] = (tipos[a.tipo || 'Correctiva'] || 0) + 1;
-                fuentes[a.fuente || 'Otros'] = (fuentes[a.fuente || 'Otros'] || 0) + 1;
+                if (estados[a.estado] !== undefined) estados[a.estado]++;
+                if (tipos[a.tipo] !== undefined) tipos[a.tipo]++;
+                fuentes[a.fuente] = (fuentes[a.fuente] || 0) + 1;
             });
 
-            if (chartEstado) chartEstado.destroy();
-            if (chartTipo) chartTipo.destroy();
-            if (chartFuente) chartFuente.destroy();
-
-            chartEstado = new Chart(document.getElementById('chartEstado'), {
+            if (chartE) chartE.destroy();
+            chartE = new Chart(document.getElementById('chartEstado'), {
                 type: 'doughnut',
                 data: { labels: Object.keys(estados), datasets: [{ data: Object.values(estados), backgroundColor: ['#dc2626', '#ca8a04', '#16a34a'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
 
-            chartTipo = new Chart(document.getElementById('chartTipo'), {
+            if (chartT) chartT.destroy();
+            chartT = new Chart(document.getElementById('chartTipo'), {
                 type: 'pie',
-                data: { labels: Object.keys(tipos), datasets: [{ data: Object.values(tipos), backgroundColor: ['#2563eb', '#0284c7', '#0d9488'] }] },
+                data: { labels: Object.keys(tipos), datasets: [{ data: Object.values(tipos), backgroundColor: ['#2563eb', '#ca8a04', '#7c3aed'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
 
-            chartFuente = new Chart(document.getElementById('chartFuente'), {
+            if (chartF) chartF.destroy();
+            chartF = new Chart(document.getElementById('chartFuente'), {
                 type: 'bar',
-                data: { labels: Object.keys(fuentes), datasets: [{ label: 'Cantidad', data: Object.values(fuentes), backgroundColor: '#6366f1' }] },
+                data: { labels: Object.keys(fuentes), datasets: [{ label: 'Cantidad', data: Object.values(fuentes), backgroundColor: '#2563eb' }] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
             });
         }
